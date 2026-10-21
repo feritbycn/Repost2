@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       - name: Zip dosyasını aç (varsa)
         run: |
@@ -38,6 +38,7 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
         run: |
           npx cap add android
+          python3 scripts/setup-android.py
           npx cap sync android
           cd android
           chmod +x gradlew
