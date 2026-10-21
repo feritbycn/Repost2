@@ -1,21 +1,10 @@
-name: Build and Deploy
+name: Build APK
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
-  build:
+  apk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +12,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Zip dosyasını aç (varsa)
         run: |
@@ -34,24 +28,22 @@ jobs:
             echo "APP_DIR=." >> "$GITHUB_ENV"
           fi
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install and build web
         working-directory: ${{ env.APP_DIR }}
+        run: |
+          npm install
+          npm run build
 
-      - name: Build
-        run: npm run build -- --base=/${{ github.event.repository.name }}/
+      - name: Build Android APK
         working-directory: ${{ env.APP_DIR }}
+        run: |
+          npx cap add android
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          path: ${{ env.APP_DIR }}/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          name: RepostPlus-apk
+          path: ${{ env.APP_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
